@@ -205,7 +205,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-zinc-500 mt-3 px-2">Klik op een rij om voorraad handmatig aan te passen. Schakel "Bijhouden" uit voor vrije verkoop zonder voorraadvermindering.</p>
+            <p class="text-xs text-zinc-500 mt-3 px-2">Klik op een rij om voorraad handmatig aan te passen. Schakel "Bijhouden" uit voor vrije verkoop zonder voorraadvermindering. Klik op het potlood om het product te bewerken.</p>
         </div>
 
         <!-- BESTELLINGEN SECTION -->
@@ -272,10 +272,12 @@
         </div>
     </div>
 
-    <!-- Add Product Modal -->
+    <!-- Add / Edit Product Modal -->
     <div id="add-product-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
         <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-7 modal">
-            <h3 class="font-display text-2xl mb-5">Nieuw verkoopbaar item</h3>
+            <h3 id="modal-title" class="font-display text-2xl mb-5">Nieuw verkoopbaar item</h3>
+            
+            <input type="hidden" id="edit-product-id">
             
             <div class="space-y-4">
                 <div>
@@ -314,7 +316,9 @@
 
             <div class="flex gap-3 mt-7">
                 <button onclick="hideAddProductModal()" class="flex-1 py-3 border border-zinc-600 rounded-3xl">Annuleren</button>
-                <button onclick="addNewProduct()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-3xl font-medium">Toevoegen aan kassa</button>
+                <button onclick="saveProduct()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-3xl font-medium" id="save-product-btn">
+                    Toevoegen aan kassa
+                </button>
             </div>
         </div>
     </div>
@@ -358,6 +362,7 @@
         let pendingOrder = JSON.parse(localStorage.getItem('piraat_pending_order') || '[]');
         let documents = JSON.parse(localStorage.getItem('piraat_documents') || '[]');
         let currentFilter = 'all';
+        let currentEditingProductId = null;
 
         // Improved realistic seed data based on your BUDDY invoices
         function seedInitialProducts() {
@@ -499,9 +504,9 @@
                                 class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-medium">
                             In mandje
                         </button>
-                        <button onclick="quickSell(${product.id})" 
-                                class="px-4 py-2.5 border border-zinc-600 hover:bg-zinc-800 rounded-2xl text-sm">
-                            <i class="fa-solid fa-bolt"></i>
+                        <button onclick="editProduct(${product.id})" 
+                                class="px-3 py-2.5 border border-zinc-600 hover:bg-zinc-800 rounded-2xl text-sm flex items-center justify-center">
+                            <i class="fa-solid fa-edit"></i>
                         </button>
                     </div>
                 `;
@@ -664,8 +669,11 @@
                     </td>
                     <td class="px-6 py-4 text-right font-mono">€ ${product.price.toFixed(2)}</td>
                     <td class="px-6 py-4 text-right">
-                        <button onclick="event.stopImmediatePropagation(); editStock(${index})" class="text-emerald-400 hover:text-emerald-300">
+                        <button onclick="event.stopImmediatePropagation(); editProductFromStock(${index})" class="text-emerald-400 hover:text-emerald-300 mr-2">
                             <i class="fa-solid fa-edit"></i>
+                        </button>
+                        <button onclick="event.stopImmediatePropagation(); editStock(${index})" class="text-emerald-400 hover:text-emerald-300">
+                            <i class="fa-solid fa-boxes"></i>
                         </button>
                     </td>
                 `;
@@ -688,11 +696,104 @@
             }
         }
 
+        function editProductFromStock(index) {
+            const product = products[index];
+            editProduct(product.id);
+        }
+
         function toggleStockTracking(index, enabled) {
             products[index].trackStock = enabled;
             saveData();
             renderStockTable();
             renderProducts(currentFilter);
+        }
+
+        // === NEW: Edit product from Kassa ===
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            currentEditingProductId = productId;
+
+            // Fill the form
+            document.getElementById('new-name').value = product.name;
+            document.getElementById('new-category').value = product.category;
+            document.getElementById('new-price').value = product.price;
+            document.getElementById('new-stock').value = product.stock;
+            document.getElementById('new-track').checked = product.trackStock;
+
+            // Update modal texts
+            document.getElementById('modal-title').textContent = 'Product bewerken';
+            document.getElementById('save-product-btn').textContent = 'Opslaan';
+
+            showAddProductModal();
+        }
+
+        function resetProductModal() {
+            currentEditingProductId = null;
+            document.getElementById('modal-title').textContent = 'Nieuw verkoopbaar item';
+            document.getElementById('save-product-btn').textContent = 'Toevoegen aan kassa';
+            document.getElementById('edit-product-id').value = '';
+            
+            // Clear form
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-category').value = 'flower';
+            document.getElementById('new-price').value = '25';
+            document.getElementById('new-stock').value = '12';
+            document.getElementById('new-track').checked = true;
+        }
+
+        function showAddProductModal() {
+            document.getElementById('add-product-modal').classList.remove('hidden');
+            document.getElementById('add-product-modal').classList.add('flex');
+        }
+
+        function hideAddProductModal() {
+            document.getElementById('add-product-modal').classList.remove('flex');
+            document.getElementById('add-product-modal').classList.add('hidden');
+            resetProductModal();
+        }
+
+        // === NEW: Unified save function (create or update) ===
+        function saveProduct() {
+            const name = document.getElementById('new-name').value.trim();
+            const category = document.getElementById('new-category').value;
+            const price = parseFloat(document.getElementById('new-price').value) || 0;
+            const stock = parseInt(document.getElementById('new-stock').value) || 0;
+            const track = document.getElementById('new-track').checked;
+
+            if (!name) {
+                alert('Naam is verplicht');
+                return;
+            }
+
+            if (currentEditingProductId) {
+                // UPDATE existing product
+                const index = products.findIndex(p => p.id === currentEditingProductId);
+                if (index !== -1) {
+                    products[index].name = name;
+                    products[index].category = category;
+                    products[index].price = price;
+                    products[index].stock = stock;
+                    products[index].trackStock = track;
+                }
+            } else {
+                // CREATE new product
+                const newProduct = {
+                    id: Date.now(),
+                    name: name,
+                    category: category,
+                    price: price,
+                    stock: stock,
+                    trackStock: track
+                };
+                products.unshift(newProduct);
+            }
+
+            saveData();
+            hideAddProductModal();
+            renderProducts(currentFilter);
+            renderStockTable();
         }
 
         // Bestellingen page
@@ -879,46 +980,6 @@
             }
         }
 
-        // Add product modal
-        function showAddProductModal() {
-            document.getElementById('add-product-modal').classList.remove('hidden');
-            document.getElementById('add-product-modal').classList.add('flex');
-        }
-
-        function hideAddProductModal() {
-            document.getElementById('add-product-modal').classList.remove('flex');
-            document.getElementById('add-product-modal').classList.add('hidden');
-        }
-
-        function addNewProduct() {
-            const name = document.getElementById('new-name').value.trim();
-            const category = document.getElementById('new-category').value;
-            const price = parseFloat(document.getElementById('new-price').value) || 0;
-            const stock = parseInt(document.getElementById('new-stock').value) || 0;
-            const track = document.getElementById('new-track').checked;
-
-            if (!name) {
-                alert('Naam is verplicht');
-                return;
-            }
-
-            const newProduct = {
-                id: Date.now(),
-                name: name,
-                category: category,
-                price: price,
-                stock: stock,
-                trackStock: track
-            };
-
-            products.unshift(newProduct);
-            saveData();
-
-            hideAddProductModal();
-            renderProducts(currentFilter);
-            renderStockTable();
-        }
-
         // Initialize everything
         function initApp() {
             seedInitialProducts();
@@ -931,7 +992,7 @@
             document.getElementById('section-kassa').classList.add('active');
             document.getElementById('nav-kassa').classList.add('nav-active');
 
-            console.log('%c[De Groene Piraat v3] App ready. Data in localStorage only. Export/Import available.', 'color:#166534');
+            console.log('%c[De Groene Piraat v3] Product editing from Kassa enabled. Simple overwrite mode.', 'color:#166534');
         }
 
         window.onload = initApp;
