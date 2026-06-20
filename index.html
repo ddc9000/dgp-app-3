@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>De Groene Piraat • Interne App v3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        .nav-active {
+            background-color: #166534;
+            color: white !important;
+            border-radius: 9999px;
+        }
+
+        .product-card {
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+
+        .modal {
+            animation: modalPop 0.2s ease forwards;
+        }
+
+        .cart-item {
+            transition: all 0.2s ease;
+        }
+
+        .piraat-header {
+            background: linear-gradient(90deg, #052e16, #166534);
+        }
+
+        .local-notice {
+            background: #166534;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Header -->
+    <header class="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
+        <div class="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-4">
+                <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-skull-crossbones text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-display text-3xl tracking-tighter">De Groene Piraat</h1>
+                    <p class="text-emerald-400 text-xs -mt-1">INTERNE APP v3 • GENT • Publiek (GitHub Pages)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-x-4">
+                <div class="text-right text-xs">
+                    <div class="text-emerald-400">Davy De Clercq</div>
+                    <div class="text-zinc-400">Zaakvoerder • Juni 2026</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Local data notice -->
+    <div class="local-notice text-center py-2 text-sm">
+        <div class="max-w-screen-xl mx-auto px-6 flex items-center justify-between text-xs">
+            <div>
+                <i class="fa-solid fa-info-circle mr-2"></i> 
+                <strong>Belangrijk:</strong> Deze app is 100% lokaal. Data (voorraad, verkopen, documenten) staat alleen in je browser. Niet gedeeld tussen apparaten.
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs">Export JSON</button>
+                <button onclick="importData()" class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs">Import JSON</button>
+                <button onclick="resetDemoData()" class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs">Reset demo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-screen-xl mx-auto px-6 pt-6 pb-24">
+        
+        <!-- Navigation -->
+        <div class="flex flex-wrap gap-2 mb-8 border-b border-zinc-800 pb-2">
+            <button onclick="switchSection('kassa')" id="nav-kassa"
+                    class="nav-active px-6 py-2.5 text-sm font-medium flex items-center gap-x-2">
+                <i class="fa-solid fa-cash-register"></i> <span>Kassa</span>
+            </button>
+            <button onclick="switchSection('voorraad')" id="nav-voorraad"
+                    class="px-6 py-2.5 text-sm font-medium flex items-center gap-x-2 hover:bg-zinc-900 rounded-3xl">
+                <i class="fa-solid fa-boxes"></i> <span>Voorraad</span>
+            </button>
+            <button onclick="switchSection('bestellingen')" id="nav-bestellingen"
+                    class="px-6 py-2.5 text-sm font-medium flex items-center gap-x-2 hover:bg-zinc-900 rounded-3xl">
+                <i class="fa-solid fa-clipboard-list"></i> <span>Bestellingen</span>
+            </button>
+            <button onclick="switchSection('inkoop')" id="nav-inkoop"
+                    class="px-6 py-2.5 text-sm font-medium flex items-center gap-x-2 hover:bg-zinc-900 rounded-3xl">
+                <i class="fa-solid fa-truck-loading"></i> <span>Te Bestellen</span>
+            </button>
+            <button onclick="switchSection('documenten')" id="nav-documenten"
+                    class="px-6 py-2.5 text-sm font-medium flex items-center gap-x-2 hover:bg-zinc-900 rounded-3xl">
+                <i class="fa-solid fa-folder-open"></i> <span>Documenten & Wetgeving</span>
+            </button>
+        </div>
+
+        <!-- KASSA SECTION -->
+        <div id="section-kassa" class="section active">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="font-display text-4xl tracking-tight">Kassa</h2>
+                    <p class="text-emerald-400">Verkoop direct • Voorraad wordt automatisch bijgewerkt</p>
+                </div>
+                <button onclick="showAddProductModal()" 
+                        class="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-3xl flex items-center gap-x-3 text-sm font-medium">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Nieuw verkoopbaar item toevoegen</span>
+                </button>
+            </div>
+
+            <!-- Quick filters -->
+            <div class="flex gap-2 mb-4">
+                <button onclick="filterProducts('all')" class="px-4 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-2xl active">Alles</button>
+                <button onclick="filterProducts('flower')" class="px-4 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-2xl">Flower</button>
+                <button onclick="filterProducts('vape')" class="px-4 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-2xl">Vape</button>
+                <button onclick="filterProducts('oil')" class="px-4 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-2xl">Oil / Tinctuur</button>
+                <button onclick="filterProducts('accessory')" class="px-4 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-2xl">Accessoires</button>
+            </div>
+
+            <!-- Products Grid -->
+            <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Cart -->
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="font-semibold text-xl flex items-center gap-x-2">
+                        <i class="fa-solid fa-shopping-cart"></i> 
+                        <span>Winkelmandje</span>
+                    </div>
+                    <button onclick="clearCart()" class="text-xs text-red-400 hover:text-red-300">Leegmaken</button>
+                </div>
+
+                <div id="cart-items" class="min-h-[80px] space-y-2 mb-4">
+                    <!-- JS populated -->
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-zinc-700">
+                    <div>
+                        <div class="text-sm text-zinc-400">Totaal</div>
+                        <div id="cart-total" class="font-display text-4xl">€ 0,00</div>
+                    </div>
+                    <button onclick="checkout()" 
+                            class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-3xl font-semibold text-lg flex items-center gap-x-3 disabled:opacity-50"
+                            id="checkout-btn">
+                        <span>AFREKENEN</span>
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VOORRAAD SECTION -->
+        <div id="section-voorraad" class="section">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-display text-4xl tracking-tight">Voorraad</h2>
+                <button onclick="showAddProductModal()" class="px-5 py-2.5 text-sm bg-zinc-800 hover:bg-zinc-700 rounded-3xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-plus"></i> <span>Nieuw product</span>
+                </button>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-zinc-950">
+                        <tr class="text-left text-zinc-400">
+                            <th class="px-6 py-4">Product</th>
+                            <th class="px-6 py-4">Categorie</th>
+                            <th class="px-6 py-4 text-right">Voorraad</th>
+                            <th class="px-6 py-4 text-center">Bijhouden?</th>
+                            <th class="px-6 py-4 text-right">Prijs</th>
+                            <th class="px-6 py-4 w-12"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table-body" class="divide-y divide-zinc-800">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-zinc-500 mt-3 px-2">Klik op een rij om voorraad handmatig aan te passen. Schakel "Bijhouden" uit voor vrije verkoop zonder voorraadvermindering.</p>
+        </div>
+
+        <!-- BESTELLINGEN SECTION -->
+        <div id="section-bestellingen" class="section">
+            <h2 class="font-display text-4xl tracking-tight mb-6">Bestellingen & Vrije Telling</h2>
+            
+            <div class="grid lg:grid-cols-5 gap-6">
+                <!-- Current stock overview -->
+                <div class="lg:col-span-3 bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="font-medium mb-4 flex items-center justify-between">
+                        <span>Huidige voorraadstanden</span>
+                        <span class="text-xs text-emerald-400">Kopieer naar bestelling</span>
+                    </div>
+                    
+                    <div id="order-stock-list" class="space-y-2 text-sm">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+
+                <!-- Pending order -->
+                <div class="lg:col-span-2 bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="font-medium">Lopende bestelling</div>
+                        <button onclick="clearPendingOrder()" class="text-xs text-red-400">Wissen</button>
+                    </div>
+                    
+                    <div id="pending-order-list" class="min-h-[140px] space-y-2 mb-4 text-sm">
+                        <!-- JS populated -->
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="addExtraToOrder()" class="flex-1 py-3 text-sm border border-zinc-600 hover:bg-zinc-800 rounded-2xl">Extra aantal toevoegen</button>
+                        <button onclick="placeOrder()" class="flex-1 py-3 text-sm bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-medium">Bestelling plaatsen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INKOOP / TE BESTELLEN -->
+        <div id="section-inkoop" class="section">
+            <h2 class="font-display text-4xl tracking-tight mb-6">Te Bestellen / Inkoop</h2>
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 text-center">
+                <i class="fa-solid fa-truck text-4xl text-zinc-600 mb-4"></i>
+                <p class="text-zinc-400 max-w-xs mx-auto">Hier komen je geplaatste inkoopbestellingen en automatische suggesties op basis van lage voorraad.</p>
+                <p class="text-xs mt-6 text-emerald-400">Wordt in volgende iteratie verder uitgewerkt samen met jou.</p>
+            </div>
+        </div>
+
+        <!-- DOCUMENTEN & WETGEVING -->
+        <div id="section-documenten" class="section">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-display text-4xl tracking-tight">Documenten & Wetgeving</h2>
+                <button onclick="showAddDocumentModal()" class="px-5 py-2.5 text-sm bg-zinc-800 hover:bg-zinc-700 rounded-3xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-upload"></i> <span>Document toevoegen</span>
+                </button>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                <div id="documents-list" class="space-y-3">
+                    <!-- JS populated -->
+                </div>
+            </div>
+            <p class="text-xs text-zinc-500 mt-4">Labrapporten, facturen (o.a. van BUDDY), Belgische/EU CBD-regelgeving, vergunningen, etc. (lokaal opgeslagen in deze app)</p>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-7 modal">
+            <h3 class="font-display text-2xl mb-5">Nieuw verkoopbaar item</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-zinc-400">NAAM</label>
+                    <input id="new-name" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3" placeholder="ZION - Blueberry Kush 5g">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-zinc-400">CATEGORIE</label>
+                        <select id="new-category" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3">
+                            <option value="flower">Flower</option>
+                            <option value="vape">Vape / Cartridge</option>
+                            <option value="oil">Oil / Tinctuur</option>
+                            <option value="accessory">Accessoire</option>
+                            <option value="other">Overig / Dienst</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-zinc-400">PRIJS (€)</label>
+                        <input id="new-price" type="number" step="0.01" value="25" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-zinc-400">START VOORRAAD</label>
+                        <input id="new-stock" type="number" value="12" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3">
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-x-2 text-sm">
+                            <input type="checkbox" id="new-track" checked class="accent-emerald-600">
+                            <span>Voorraad bijhouden</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-7">
+                <button onclick="hideAddProductModal()" class="flex-1 py-3 border border-zinc-600 rounded-3xl">Annuleren</button>
+                <button onclick="addNewProduct()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-3xl font-medium">Toevoegen aan kassa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Document Modal -->
+    <div id="add-document-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-7 modal">
+            <h3 class="font-display text-2xl mb-5">Document toevoegen</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-zinc-400">NAAM / TITEL</label>
+                    <input id="doc-name" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3" placeholder="Labrapport - Amnesia Haze batch 0426 of BUDDY factuur">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400">TYPE</label>
+                    <select id="doc-type" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3">
+                        <option value="lab">Labrapport / Analyse</option>
+                        <option value="legal">Wetgevingsdocument</option>
+                        <option value="invoice">Factuur / Bon (BUDDY)</option>
+                        <option value="other">Overig</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400">NOTITIE</label>
+                    <textarea id="doc-notes" rows="2" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 text-sm" placeholder="THC < 0.2% - geldig tot ... of referentie BUD09433"></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-7">
+                <button onclick="hideAddDocumentModal()" class="flex-1 py-3 border border-zinc-600 rounded-3xl">Annuleren</button>
+                <button onclick="addNewDocument()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-3xl font-medium">Opslaan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let products = JSON.parse(localStorage.getItem('piraat_products') || '[]');
+        let sales = JSON.parse(localStorage.getItem('piraat_sales') || '[]');
+        let pendingOrder = JSON.parse(localStorage.getItem('piraat_pending_order') || '[]');
+        let documents = JSON.parse(localStorage.getItem('piraat_documents') || '[]');
+        let currentFilter = 'all';
+
+        // Improved realistic seed data based on your BUDDY invoices
+        function seedInitialProducts() {
+            if (products.length > 0) return;
+
+            products = [
+                // Flowers from Zion (your invoices)
+                { id: 1, name: "ZION - Blueberry Kush 5g", category: "flower", price: 17.33, stock: 25, trackStock: true },
+                { id: 2, name: "ZION - Super Haze 3g", category: "flower", price: 10.80, stock: 18, trackStock: true },
+                { id: 3, name: "ZION - White Widow 5g", category: "flower", price: 13.70, stock: 12, trackStock: true },
+                { id: 4, name: "ZION - Rolling Trim Mix 15g", category: "flower", price: 10.51, stock: 30, trackStock: true },
+                // OYL oils & products
+                { id: 5, name: "OYL - Full Spectrum 10% (10ml)", category: "oil", price: 10.97, stock: 15, trackStock: true },
+                { id: 6, name: "OYL - Full Spectrum 20% (10ml)", category: "oil", price: 14.69, stock: 10, trackStock: true },
+                { id: 7, name: "OYL - Sleep (10ml)", category: "oil", price: 11.60, stock: 12, trackStock: true },
+                { id: 8, name: "OYL - Soothing CBD Bath salts", category: "other", price: 4.80, stock: 8, trackStock: true },
+                // PRZ accessories (your frequent orders)
+                { id: 9, name: "PRZ - XTRA SLIM 6mm CARBON tips pot 100", category: "accessory", price: 9.90, stock: 40, trackStock: true },
+                { id: 10, name: "PRZ - REGULAR 9mm CARBON tips 50 pcs", category: "accessory", price: 4.10, stock: 35, trackStock: true },
+                { id: 11, name: "PRZ - ROLLING PAPER KING SIZE SLIM x40", category: "accessory", price: 25.90, stock: 20, trackStock: true },
+                // Hempextract / resins
+                { id: 12, name: "Hempextract Gelato 2g", category: "other", price: 4.25, stock: 60, trackStock: true },
+                { id: 13, name: "Hempextract Hypnosis 2g", category: "other", price: 4.75, stock: 55, trackStock: true },
+                { id: 14, name: "Hempextract Dream 2g", category: "other", price: 3.75, stock: 50, trackStock: true },
+                { id: 15, name: "CBD Isolate (100g)", category: "other", price: 600.00, stock: 5, trackStock: true },
+                // Vapes
+                { id: 16, name: "ELFA PRO STARTER KIT - Tropical (20mg/ml)", category: "vape", price: 3.80, stock: 30, trackStock: true },
+                { id: 17, name: "ELFA PRO STARTER KIT - Watermelon (20mg/ml)", category: "vape", price: 3.80, stock: 25, trackStock: true },
+                // Glass jars
+                { id: 18, name: "Bocaux en verre 5ml met deksel (100 stuks)", category: "accessory", price: 0.60, stock: 200, trackStock: true }
+            ];
+            saveData();
+        }
+
+        function saveData() {
+            localStorage.setItem('piraat_products', JSON.stringify(products));
+            localStorage.setItem('piraat_sales', JSON.stringify(sales));
+            localStorage.setItem('piraat_pending_order', JSON.stringify(pendingOrder));
+            localStorage.setItem('piraat_documents', JSON.stringify(documents));
+        }
+
+        // Export / Import for moving data between browsers/computers
+        function exportData() {
+            const data = {
+                products: products,
+                sales: sales,
+                pendingOrder: pendingOrder,
+                documents: documents,
+                exportedAt: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `de-groene-piraat-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (imported.products) products = imported.products;
+                        if (imported.sales) sales = imported.sales;
+                        if (imported.pendingOrder) pendingOrder = imported.pendingOrder;
+                        if (imported.documents) documents = imported.documents;
+                        saveData();
+                        alert('Data succesvol geïmporteerd! Herlaad de pagina om alles te zien.');
+                        location.reload();
+                    } catch (err) {
+                        alert('Fout bij importeren: ongeldig JSON bestand.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function resetDemoData() {
+            if (!confirm('Weet je zeker dat je alle data wilt wissen en demo data opnieuw wilt laden?')) return;
+            localStorage.clear();
+            products = [];
+            sales = [];
+            pendingOrder = [];
+            documents = [];
+            seedInitialProducts();
+            location.reload();
+        }
+
+        // Section switching
+        function switchSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + section).classList.add('active');
+            
+            document.querySelectorAll('[id^="nav-"]').forEach(nav => nav.classList.remove('nav-active'));
+            document.getElementById('nav-' + section).classList.add('nav-active');
+
+            if (section === 'voorraad') renderStockTable();
+            if (section === 'bestellingen') renderBestellingen();
+            if (section === 'documenten') renderDocuments();
+        }
+
+        // Products rendering for Kassa
+        function renderProducts(filter = 'all') {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+            currentFilter = filter;
+
+            let filtered = products;
+            if (filter !== 'all') {
+                filtered = products.filter(p => p.category === filter);
+            }
+
+            filtered.forEach(product => {
+                const card = document.createElement('div');
+                card.className = `product-card bg-zinc-900 border border-zinc-700 hover:border-emerald-600 rounded-3xl p-5 flex flex-col`;
+                
+                const stockText = product.trackStock 
+                    ? `<span class="text-xs ${product.stock < 6 ? 'text-red-400' : 'text-emerald-400'}">${product.stock} op voorraad</span>`
+                    : `<span class="text-xs text-amber-400">Vrije telling</span>`;
+
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-semibold leading-tight mb-1">${product.name}</div>
+                        <div class="text-emerald-400 text-xl font-display">€ ${product.price.toFixed(2)}</div>
+                        <div class="mt-2">${stockText}</div>
+                    </div>
+                    
+                    <div class="mt-4 flex gap-2">
+                        <button onclick="addToCart(${product.id})" 
+                                class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-medium">
+                            In mandje
+                        </button>
+                        <button onclick="quickSell(${product.id})" 
+                                class="px-4 py-2.5 border border-zinc-600 hover:bg-zinc-800 rounded-2xl text-sm">
+                            <i class="fa-solid fa-bolt"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterProducts(category) {
+            renderProducts(category);
+        }
+
+        // Cart functions
+        let cart = [];
+
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const existing = cart.find(item => item.id === productId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function quickSell(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            processSale([{ ...product, qty: 1 }]);
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-zinc-400 text-sm py-4">Winkelmandje is leeg. Voeg producten toe vanuit de grid hierboven.</div>`;
+                totalEl.textContent = '€ 0,00';
+                checkoutBtn.disabled = true;
+                return;
+            }
+
+            let html = '';
+            let total = 0;
+
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.qty;
+                total += itemTotal;
+                
+                html += `
+                    <div class="cart-item flex justify-between items-center bg-zinc-950 px-4 py-3 rounded-2xl">
+                        <div class="flex-1">
+                            <div class="font-medium text-sm">${item.name}</div>
+                            <div class="text-xs text-zinc-400">€ ${item.price.toFixed(2)} × ${item.qty}</div>
+                        </div>
+                        <div class="flex items-center gap-x-4">
+                            <div class="font-mono text-emerald-300">€ ${itemTotal.toFixed(2)}</div>
+                            <button onclick="changeCartQty(${index}, -1)" class="w-7 h-7 flex items-center justify-center text-lg leading-none text-zinc-400 hover:text-white">-</button>
+                            <button onclick="changeCartQty(${index}, 1)" class="w-7 h-7 flex items-center justify-center text-lg leading-none text-zinc-400 hover:text-white">+</button>
+                            <button onclick="removeFromCart(${index})" class="text-red-400 hover:text-red-300 ml-1"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            totalEl.textContent = `€ ${total.toFixed(2)}`;
+            checkoutBtn.disabled = false;
+        }
+
+        function changeCartQty(index, delta) {
+            cart[index].qty += delta;
+            if (cart[index].qty < 1) cart[index].qty = 1;
+            renderCart();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = [];
+            renderCart();
+        }
+
+        // Checkout / Sale processing
+        function checkout() {
+            if (cart.length === 0) return;
+            processSale(cart);
+            cart = [];
+            renderCart();
+            renderProducts(currentFilter);
+        }
+
+        function processSale(items) {
+            let total = 0;
+
+            items.forEach(item => {
+                total += item.price * item.qty;
+
+                const productIndex = products.findIndex(p => p.id === item.id);
+                if (productIndex !== -1 && products[productIndex].trackStock) {
+                    products[productIndex].stock = Math.max(0, products[productIndex].stock - item.qty);
+                }
+            });
+
+            sales.unshift({
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                items: items.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+                total: total
+            });
+
+            saveData();
+            
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-8 py-3 rounded-3xl shadow-xl flex items-center gap-x-3 text-sm z-[200]`;
+            toast.innerHTML = `<i class="fa-solid fa-check-circle"></i> <span>Verkoop geregistreerd (€ ${total.toFixed(2)})</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 1800);
+
+            if (document.getElementById('section-voorraad').classList.contains('active')) renderStockTable();
+            if (document.getElementById('section-bestellingen').classList.contains('active')) renderBestellingen();
+        }
+
+        // Stock table
+        function renderStockTable() {
+            const tbody = document.getElementById('stock-table-body');
+            tbody.innerHTML = '';
+
+            products.forEach((product, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-zinc-950 cursor-pointer';
+                row.onclick = () => editStock(index);
+                
+                const stockColor = product.trackStock 
+                    ? (product.stock < 6 ? 'text-red-400' : 'text-emerald-300') 
+                    : 'text-amber-400';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-medium">${product.name}</td>
+                    <td class="px-6 py-4 text-xs text-zinc-400">${product.category}</td>
+                    <td class="px-6 py-4 text-right">
+                        <span class="${stockColor} font-mono text-lg">${product.stock}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <label class="inline-flex items-center cursor-pointer" onclick="event.stopImmediatePropagation()">
+                            <input type="checkbox" ${product.trackStock ? 'checked' : ''} 
+                                   onchange="toggleStockTracking(${index}, this.checked)" class="accent-emerald-600">
+                        </label>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono">€ ${product.price.toFixed(2)}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="event.stopImmediatePropagation(); editStock(${index})" class="text-emerald-400 hover:text-emerald-300">
+                            <i class="fa-solid fa-edit"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function editStock(index) {
+            const product = products[index];
+            const newStock = prompt(`Pas voorraad aan voor:\n${product.name}\n\nHuidige voorraad: ${product.stock}`, product.stock);
+            
+            if (newStock !== null) {
+                const parsed = parseInt(newStock);
+                if (!isNaN(parsed) && parsed >= 0) {
+                    products[index].stock = parsed;
+                    saveData();
+                    renderStockTable();
+                    renderProducts(currentFilter);
+                }
+            }
+        }
+
+        function toggleStockTracking(index, enabled) {
+            products[index].trackStock = enabled;
+            saveData();
+            renderStockTable();
+            renderProducts(currentFilter);
+        }
+
+        // Bestellingen page
+        function renderBestellingen() {
+            const stockList = document.getElementById('order-stock-list');
+            stockList.innerHTML = '';
+
+            products.forEach((product, idx) => {
+                if (!product.trackStock) return;
+
+                const div = document.createElement('div');
+                div.className = `flex justify-between items-center px-4 py-3 bg-zinc-950 rounded-2xl text-sm`;
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div>${product.name}</div>
+                        <div class="text-xs text-zinc-400">${product.stock} stuks</div>
+                    </div>
+                    <button onclick="addToPendingOrder(${idx})" 
+                            class="px-4 py-1.5 text-xs bg-emerald-900 hover:bg-emerald-800 rounded-2xl">
+                        Naar bestelling
+                    </button>
+                `;
+                stockList.appendChild(div);
+            });
+
+            renderPendingOrder();
+        }
+
+        function addToPendingOrder(productIndex) {
+            const product = products[productIndex];
+            const existing = pendingOrder.findIndex(o => o.id === product.id);
+            
+            if (existing !== -1) {
+                pendingOrder[existing].qty = product.stock;
+            } else {
+                pendingOrder.push({
+                    id: product.id,
+                    name: product.name,
+                    qty: product.stock,
+                    suggested: product.stock
+                });
+            }
+            saveData();
+            renderPendingOrder();
+        }
+
+        function renderPendingOrder() {
+            const container = document.getElementById('pending-order-list');
+            if (!container) return;
+
+            if (pendingOrder.length === 0) {
+                container.innerHTML = `<div class="text-sm text-zinc-400 py-6 text-center">Nog geen items in lopende bestelling.<br>Gebruik "Naar bestelling" hierboven.</div>`;
+                return;
+            }
+
+            let html = '';
+            pendingOrder.forEach((item, index) => {
+                html += `
+                    <div class="flex justify-between items-center bg-zinc-950 px-4 py-3 rounded-2xl text-sm">
+                        <div class="flex-1">${item.name}</div>
+                        <div class="flex items-center gap-x-3">
+                            <input type="number" value="${item.qty}" 
+                                   onchange="updatePendingQty(${index}, this.value)"
+                                   class="w-16 bg-zinc-900 border border-zinc-600 rounded-xl px-3 py-1 text-center font-mono">
+                            <button onclick="removeFromPending(${index})" class="text-red-400"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updatePendingQty(index, newQty) {
+            const qty = parseInt(newQty) || 0;
+            pendingOrder[index].qty = qty;
+            saveData();
+        }
+
+        function removeFromPending(index) {
+            pendingOrder.splice(index, 1);
+            saveData();
+            renderPendingOrder();
+        }
+
+        function clearPendingOrder() {
+            if (confirm('Lopende bestelling wissen?')) {
+                pendingOrder = [];
+                saveData();
+                renderPendingOrder();
+            }
+        }
+
+        function addExtraToOrder() {
+            const name = prompt('Naam van extra item:');
+            if (!name) return;
+            const qty = parseInt(prompt('Aantal:', '10')) || 1;
+            
+            pendingOrder.push({
+                id: 'extra-' + Date.now(),
+                name: name,
+                qty: qty,
+                suggested: qty
+            });
+            saveData();
+            renderPendingOrder();
+        }
+
+        function placeOrder() {
+            if (pendingOrder.length === 0) return;
+            
+            const orderText = pendingOrder.map(item => `${item.qty}x ${item.name}`).join('\n');
+            alert(`Bestelling klaargezet!\n\n${orderText}\n\n(In echte versie: export naar PDF/CSV + mail naar BUDDY leverancier)`);
+            
+            pendingOrder = [];
+            saveData();
+            renderPendingOrder();
+        }
+
+        // Documents
+        function renderDocuments() {
+            const container = document.getElementById('documents-list');
+            container.innerHTML = '';
+
+            if (documents.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-zinc-400 text-sm">Nog geen documenten toegevoegd.<br>Gebruik de knop rechtsboven of importeer je BUDDY facturen.</div>`;
+                return;
+            }
+
+            documents.forEach((doc, index) => {
+                const div = document.createElement('div');
+                div.className = `flex justify-between items-center px-5 py-4 bg-zinc-950 rounded-2xl`;
+                div.innerHTML = `
+                    <div>
+                        <div class="font-medium">${doc.name}</div>
+                        <div class="text-xs text-zinc-400">${doc.type} • ${new Date(doc.date).toLocaleDateString('nl-BE')}</div>
+                        ${doc.notes ? `<div class="text-xs text-emerald-300 mt-1">${doc.notes}</div>` : ''}
+                    </div>
+                    <button onclick="deleteDocument(${index})" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showAddDocumentModal() {
+            document.getElementById('add-document-modal').classList.remove('hidden');
+            document.getElementById('add-document-modal').classList.add('flex');
+        }
+
+        function hideAddDocumentModal() {
+            document.getElementById('add-document-modal').classList.remove('flex');
+            document.getElementById('add-document-modal').classList.add('hidden');
+        }
+
+        function addNewDocument() {
+            const name = document.getElementById('doc-name').value.trim();
+            const type = document.getElementById('doc-type').value;
+            const notes = document.getElementById('doc-notes').value.trim();
+
+            if (!name) {
+                alert('Naam is verplicht');
+                return;
+            }
+
+            documents.unshift({
+                id: Date.now(),
+                name: name,
+                type: type,
+                notes: notes,
+                date: new Date().toISOString()
+            });
+
+            saveData();
+            hideAddDocumentModal();
+            renderDocuments();
+            document.getElementById('doc-name').value = '';
+            document.getElementById('doc-notes').value = '';
+        }
+
+        function deleteDocument(index) {
+            if (confirm('Document verwijderen?')) {
+                documents.splice(index, 1);
+                saveData();
+                renderDocuments();
+            }
+        }
+
+        // Add product modal
+        function showAddProductModal() {
+            document.getElementById('add-product-modal').classList.remove('hidden');
+            document.getElementById('add-product-modal').classList.add('flex');
+        }
+
+        function hideAddProductModal() {
+            document.getElementById('add-product-modal').classList.remove('flex');
+            document.getElementById('add-product-modal').classList.add('hidden');
+        }
+
+        function addNewProduct() {
+            const name = document.getElementById('new-name').value.trim();
+            const category = document.getElementById('new-category').value;
+            const price = parseFloat(document.getElementById('new-price').value) || 0;
+            const stock = parseInt(document.getElementById('new-stock').value) || 0;
+            const track = document.getElementById('new-track').checked;
+
+            if (!name) {
+                alert('Naam is verplicht');
+                return;
+            }
+
+            const newProduct = {
+                id: Date.now(),
+                name: name,
+                category: category,
+                price: price,
+                stock: stock,
+                trackStock: track
+            };
+
+            products.unshift(newProduct);
+            saveData();
+
+            hideAddProductModal();
+            renderProducts(currentFilter);
+            renderStockTable();
+        }
+
+        // Initialize everything
+        function initApp() {
+            seedInitialProducts();
+            
+            // Render initial Kassa
+            renderProducts('all');
+            renderCart();
+
+            // Show Kassa by default
+            document.getElementById('section-kassa').classList.add('active');
+            document.getElementById('nav-kassa').classList.add('nav-active');
+
+            console.log('%c[De Groene Piraat v3] App ready. Data in localStorage only. Export/Import available.', 'color:#166534');
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
